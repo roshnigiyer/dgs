@@ -16,6 +16,11 @@ from multiG import multiG
 import pickle
 from utils import circular_correlation, np_ccorr
 from tensorflow.keras import Model
+import globals as g
+import euc_space
+import hyp_space
+import sph_space
+import hyp_euc_space
 
 ########################################
 # Euclidean Norm, Distance & Operators #
@@ -124,7 +129,6 @@ def hyper_scalar_vec_mult(r, x, k=1.0):
     eps = get_eps(x)
     tan = tf.clip_by_value(sqrt_k * norm_x, -1.0 + eps, 1.0 - eps)
     return (1 / sqrt_k) * tf.math.tanh(r * tf.math.atanh(tan)) * x / norm_x
-
 
 def hyper_vec_vec_mult(u, v):
     temp_mul = tf.multiply(u,v)
@@ -235,50 +239,6 @@ def spherical_vec_vec_mult(u, v, eps=1e-5):
     if (ret_vec_mult_norm >= 1):
         ret_vec_mult = tf.subtract(tf.math.divide(ret_vec_mult, ret_vec_mult_norm), eps)
     return ret_vec_mult
-
-
-# Global variables temporary initialization
-NORM_FUNC_HORIZ_A = euc_norm
-NORM_FUNC_HORIZ_B = euc_norm
-
-NORM_FUNC_VERT_A = euc_norm
-NORM_FUNC_VERT_B = euc_norm
-NORM_FUNC_VERT_AM = euc_norm
-
-DIST_FUNC_HORIZ_A = euc_dist
-DIST_FUNC_HORIZ_B = euc_dist
-
-DIST_FUNC_VERT_A = euc_dist
-DIST_FUNC_VERT_B = euc_dist
-DIST_FUNC_VERT_AM = euc_dist
-
-ADD_HORIZ_A = euc_add
-ADD_HORIZ_B = euc_add
-
-ADD_VERT_A = euc_add
-ADD_VERT_B = euc_add
-ADD_VERT_AM = euc_add
-
-MATRIX_VEC_MULT_HORIZ_A = euc_matrix_vec_mult
-MATRIX_VEC_MULT_HORIZ_B = euc_matrix_vec_mult
-
-MATRIX_VEC_MULT_VERT_A = euc_matrix_vec_mult
-MATRIX_VEC_MULT_VERT_B = euc_matrix_vec_mult
-MATRIX_VEC_MULT_VERT_AM = euc_matrix_vec_mult
-
-SCALAR_VEC_MULT_HORIZ_A = euc_scalar_vec_mult
-SCALAR_VEC_MULT_HORIZ_B = euc_scalar_vec_mult
-
-SCALAR_VEC_MULT_VERT_A = euc_scalar_vec_mult
-SCALAR_VEC_MULT_VERT_B = euc_scalar_vec_mult
-SCALAR_VEC_MULT_VERT_AM = euc_scalar_vec_mult
-
-VEC_VEC_MULT_HORIZ_A = euc_vec_vec_mult
-VEC_VEC_MULT_HORIZ_B = euc_vec_vec_mult
-
-VEC_VEC_MULT_VERT_A = euc_vec_vec_mult
-VEC_VEC_MULT_VERT_B = euc_vec_vec_mult
-VEC_VEC_MULT_VERT_AM = euc_vec_vec_mult
 
 
 # Orthogonal Initializer from
@@ -491,10 +451,10 @@ class TFParts(tf.keras.Model):
 
         self.my_build()
 
-        self._ht1_norm_vert = NORM_FUNC_VERT_A(self._ht1_vert)
-        self._ht1_norm_horiz = NORM_FUNC_HORIZ_A(self._ht1_horiz)
-        self._ht2_norm_vert = NORM_FUNC_VERT_B(self._ht2_vert)
-        self._ht2_norm_horiz = NORM_FUNC_HORIZ_B(self._ht2_horiz)
+        self._ht1_norm_vert = g.NORM_FUNC_VERT_A(self._ht1_vert)
+        self._ht1_norm_horiz = g.NORM_FUNC_HORIZ_A(self._ht1_horiz)
+        self._ht2_norm_vert = g.NORM_FUNC_VERT_B(self._ht2_vert)
+        self._ht2_norm_horiz = g.NORM_FUNC_HORIZ_B(self._ht2_horiz)
 
         # input_shape=[tf.TensorSpec(shape=[None], dtype=tf.int64), tf.TensorSpec(shape=[None], dtype=tf.int64),
         #                          tf.TensorSpec(shape=[None], dtype=tf.int64), tf.TensorSpec(shape=[None], dtype=tf.int64),
@@ -521,48 +481,6 @@ class TFParts(tf.keras.Model):
 
     def my_build(self):
 
-        global NORM_FUNC_HORIZ_A
-        global NORM_FUNC_HORIZ_B
-
-        global NORM_FUNC_VERT_A
-        global NORM_FUNC_VERT_B
-        global NORM_FUNC_VERT_AM
-
-        global DIST_FUNC_HORIZ_A
-        global DIST_FUNC_HORIZ_B
-
-        global DIST_FUNC_VERT_A
-        global DIST_FUNC_VERT_B
-        global DIST_FUNC_VERT_AM
-
-        global ADD_HORIZ_A
-        global ADD_HORIZ_B
-
-        global ADD_VERT_A
-        global ADD_VERT_B
-        global ADD_VERT_AM
-
-        global MATRIX_VEC_MULT_HORIZ_A
-        global MATRIX_VEC_MULT_HORIZ_B
-
-        global MATRIX_VEC_MULT_VERT_A
-        global MATRIX_VEC_MULT_VERT_B
-        global MATRIX_VEC_MULT_VERT_AM
-
-        global SCALAR_VEC_MULT_HORIZ_A
-        global SCALAR_VEC_MULT_HORIZ_B
-
-        global SCALAR_VEC_MULT_VERT_A
-        global SCALAR_VEC_MULT_VERT_B
-        global SCALAR_VEC_MULT_VERT_AM
-
-        global VEC_VEC_MULT_HORIZ_A
-        global VEC_VEC_MULT_HORIZ_B
-
-        global VEC_VEC_MULT_VERT_A
-        global VEC_VEC_MULT_VERT_B
-        global VEC_VEC_MULT_VERT_AM
-
 
         # Example Configs
 
@@ -570,189 +488,28 @@ class TFParts(tf.keras.Model):
                 and self.vertical_links_B == 'euclidean' and self.horizontal_links_B == 'euclidean'\
                 and self.vertical_links_AM == 'euclidean':
 
-            NORM_FUNC_HORIZ_A = euc_norm
-            NORM_FUNC_HORIZ_B = euc_norm
-
-            NORM_FUNC_VERT_A = euc_norm
-            NORM_FUNC_VERT_B = euc_norm
-            NORM_FUNC_VERT_AM = euc_norm
-
-            DIST_FUNC_HORIZ_A = euc_dist
-            DIST_FUNC_HORIZ_B = euc_dist
-
-            DIST_FUNC_VERT_A = euc_dist
-            DIST_FUNC_VERT_B = euc_dist
-            DIST_FUNC_VERT_AM = euc_dist
-
-            ADD_HORIZ_A = euc_add
-            ADD_HORIZ_B = euc_add
-
-            ADD_VERT_A = euc_add
-            ADD_VERT_B = euc_add
-            ADD_VERT_AM = euc_add
-
-            MATRIX_VEC_MULT_HORIZ_A = euc_matrix_vec_mult
-            MATRIX_VEC_MULT_HORIZ_B = euc_matrix_vec_mult
-
-            MATRIX_VEC_MULT_VERT_A = euc_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_B = euc_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_AM = euc_matrix_vec_mult
-
-            SCALAR_VEC_MULT_HORIZ_A = euc_scalar_vec_mult
-            SCALAR_VEC_MULT_HORIZ_B = euc_scalar_vec_mult
-
-            SCALAR_VEC_MULT_VERT_A = euc_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_B = euc_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_AM = euc_scalar_vec_mult
-
-            VEC_VEC_MULT_HORIZ_A = euc_vec_vec_mult
-            VEC_VEC_MULT_HORIZ_B = euc_vec_vec_mult
-
-            VEC_VEC_MULT_VERT_A = euc_vec_vec_mult
-            VEC_VEC_MULT_VERT_B = euc_vec_vec_mult
-            VEC_VEC_MULT_VERT_AM = euc_vec_vec_mult
-
+            euc_space.all_euc()
 
 
         elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
                 and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
                 and self.horizontal_links_B == 'euclidean':
 
-            NORM_FUNC_HORIZ_A == hyper_norm
-            NORM_FUNC_HORIZ_B == hyper_norm
-
-            NORM_FUNC_VERT_A == hyper_norm
-            NORM_FUNC_VERT_B == hyper_norm
-            NORM_FUNC_VERT_AM == hyper_norm
-
-            DIST_FUNC_HORIZ_A == euc_dist
-            DIST_FUNC_HORIZ_B == euc_dist
-
-            DIST_FUNC_VERT_A == hyper_dist
-            DIST_FUNC_VERT_B == hyper_dist
-            DIST_FUNC_VERT_AM == hyper_dist
-
-            ADD_HORIZ_A == euc_add
-            ADD_HORIZ_B == hyper_add
-
-            ADD_VERT_A = hyper_add
-            ADD_VERT_B = hyper_add
-            ADD_VERT_AM = hyper_add
-
-            MATRIX_VEC_MULT_HORIZ_A = euc_matrix_vec_mult
-            MATRIX_VEC_MULT_HORIZ_B = euc_matrix_vec_mult
-
-            MATRIX_VEC_MULT_VERT_A = hyper_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_B = hyper_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_AM = hyper_matrix_vec_mult
-
-            SCALAR_VEC_MULT_HORIZ_A = euc_scalar_vec_mult
-            SCALAR_VEC_MULT_HORIZ_B = euc_scalar_vec_mult
-
-            SCALAR_VEC_MULT_VERT_A = hyper_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_B = hyper_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_AM = hyper_scalar_vec_mult
-
-            VEC_VEC_MULT_HORIZ_A = euc_vec_vec_mult
-            VEC_VEC_MULT_HORIZ_B = euc_vec_vec_mult
-
-            VEC_VEC_MULT_VERT_A = hyper_vec_vec_mult
-            VEC_VEC_MULT_VERT_B = hyper_vec_vec_mult
-            VEC_VEC_MULT_VERT_AM = hyper_vec_vec_mult
+            hyp_euc_space.hyp_euc()
 
 
         elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
                 and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'hyperbolic' \
                 and self.horizontal_links_B == 'hyperbolic':
 
-            NORM_FUNC_HORIZ_A == hyper_norm
-            NORM_FUNC_HORIZ_B == hyper_norm
-
-            NORM_FUNC_VERT_A == hyper_norm
-            NORM_FUNC_VERT_B == hyper_norm
-            NORM_FUNC_VERT_AM == hyper_norm
-
-            DIST_FUNC_HORIZ_A == hyper_dist
-            DIST_FUNC_HORIZ_B == hyper_dist
-
-            DIST_FUNC_VERT_A == hyper_dist
-            DIST_FUNC_VERT_B == hyper_dist
-            DIST_FUNC_VERT_AM == hyper_dist
-
-            ADD_HORIZ_A == hyper_add
-            ADD_HORIZ_B == hyper_add
-
-            ADD_VERT_A = hyper_add
-            ADD_VERT_B = hyper_add
-            ADD_VERT_AM = hyper_add
-
-            MATRIX_VEC_MULT_HORIZ_A = hyper_matrix_vec_mult
-            MATRIX_VEC_MULT_HORIZ_B = hyper_matrix_vec_mult
-
-            MATRIX_VEC_MULT_VERT_A = hyper_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_B = hyper_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_AM = hyper_matrix_vec_mult
-
-            SCALAR_VEC_MULT_HORIZ_A = hyper_scalar_vec_mult
-            SCALAR_VEC_MULT_HORIZ_B = hyper_scalar_vec_mult
-
-            SCALAR_VEC_MULT_VERT_A = hyper_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_B = hyper_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_AM = hyper_scalar_vec_mult
-
-            VEC_VEC_MULT_HORIZ_A = hyper_vec_vec_mult
-            VEC_VEC_MULT_HORIZ_B = hyper_vec_vec_mult
-
-            VEC_VEC_MULT_VERT_A = hyper_vec_vec_mult
-            VEC_VEC_MULT_VERT_B = hyper_vec_vec_mult
-            VEC_VEC_MULT_VERT_AM = hyper_vec_vec_mult
+                hyp_space.all_hyp()
 
 
         elif self.vertical_links_A == 'spherical' and self.vertical_links_B == 'spherical' \
                 and self.vertical_links_AM == 'spherical' and self.horizontal_links_A == 'spherical' \
                 and self.horizontal_links_B == 'spherical':
 
-            NORM_FUNC_HORIZ_A == spherical_norm
-            NORM_FUNC_HORIZ_B == spherical_norm
-
-            NORM_FUNC_VERT_A == spherical_norm
-            NORM_FUNC_VERT_B == spherical_norm
-            NORM_FUNC_VERT_AM == spherical_norm
-
-            DIST_FUNC_HORIZ_A == spherical_dist
-            DIST_FUNC_HORIZ_B == spherical_dist
-
-            DIST_FUNC_VERT_A == spherical_dist
-            DIST_FUNC_VERT_B == spherical_dist
-            DIST_FUNC_VERT_AM == spherical_dist
-
-            ADD_HORIZ_A == spherical_add
-            ADD_HORIZ_B == spherical_add
-
-            ADD_VERT_A = spherical_add
-            ADD_VERT_B = spherical_add
-            ADD_VERT_AM = spherical_add
-
-            MATRIX_VEC_MULT_HORIZ_A = spherical_matrix_vec_mult
-            MATRIX_VEC_MULT_HORIZ_B = spherical_matrix_vec_mult
-
-            MATRIX_VEC_MULT_VERT_A = spherical_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_B = spherical_matrix_vec_mult
-            MATRIX_VEC_MULT_VERT_AM = spherical_matrix_vec_mult
-
-            SCALAR_VEC_MULT_HORIZ_A = spherical_scalar_vec_mult
-            SCALAR_VEC_MULT_HORIZ_B = spherical_scalar_vec_mult
-
-            SCALAR_VEC_MULT_VERT_A = spherical_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_B = spherical_scalar_vec_mult
-            SCALAR_VEC_MULT_VERT_AM = spherical_scalar_vec_mult
-
-            VEC_VEC_MULT_HORIZ_A = spherical_vec_vec_mult
-            VEC_VEC_MULT_HORIZ_B = spherical_vec_vec_mult
-
-            VEC_VEC_MULT_VERT_A = spherical_vec_vec_mult
-            VEC_VEC_MULT_VERT_B = spherical_vec_vec_mult
-            VEC_VEC_MULT_VERT_AM = spherical_vec_vec_mult
+                sph_space.all_sph()
 
         else:
             raise NotImplementedError()
@@ -768,10 +525,10 @@ class TFParts(tf.keras.Model):
             tf.summary.histogram("r2_vert", r2_vert)
             tf.summary.histogram("r2_horiz", r2_horiz)
 
-            self._ht1_norm_vert = NORM_FUNC_VERT(ht1_vert)
-            self._ht1_norm_horiz = NORM_FUNC_HORIZ(ht1_horiz)
-            self._ht2_norm_vert = NORM_FUNC_VERT(ht2_vert)
-            self._ht2_norm_horiz = NORM_FUNC_HORIZ(ht2_horiz)
+            self._ht1_norm_vert = g.NORM_FUNC_VERT(ht1_vert)
+            self._ht1_norm_horiz = g.NORM_FUNC_HORIZ(ht1_horiz)
+            self._ht2_norm_vert = g.NORM_FUNC_VERT(ht2_vert)
+            self._ht2_norm_horiz = g.NORM_FUNC_HORIZ(ht2_horiz)
 
 
             tf.summary.scalar("A_loss_vert", A_loss_vert)
@@ -824,27 +581,27 @@ class TFParts(tf.keras.Model):
             _A_tn_index_vert = tf.dtypes.cast(_A_tn_index_vert, tf.int64)
 
             a = tf.nn.embedding_lookup(self._ht1_vert, _A_h_index_vert)
-            A_h_ent_batch_vert = NORM_FUNC_VERT_A(a)
-            A_t_ent_batch_vert = NORM_FUNC_VERT_A(tf.nn.embedding_lookup(self._ht1_vert, _A_t_index_vert))
+            A_h_ent_batch_vert = g.NORM_FUNC_VERT_A(a)
+            A_t_ent_batch_vert = g.NORM_FUNC_VERT_A(tf.nn.embedding_lookup(self._ht1_vert, _A_t_index_vert))
             A_rel_batch_vert = tf.nn.embedding_lookup(self._r1_vert, _A_r_index_vert)
-            A_hn_ent_batch_vert = NORM_FUNC_VERT_A(tf.nn.embedding_lookup(self._ht1_vert, _A_hn_index_vert))
-            A_tn_ent_batch_vert = NORM_FUNC_VERT_A(tf.nn.embedding_lookup(self._ht1_vert, _A_tn_index_vert))
+            A_hn_ent_batch_vert = g.NORM_FUNC_VERT_A(tf.nn.embedding_lookup(self._ht1_vert, _A_hn_index_vert))
+            A_tn_ent_batch_vert = g.NORM_FUNC_VERT_A(tf.nn.embedding_lookup(self._ht1_vert, _A_tn_index_vert))
 
             # Compute the predictions
             if self.method == 'transe':
-                self.A_loss_pos_vert_matrix = DIST_FUNC_VERT_A(ADD_VERT_A(A_h_ent_batch_vert, A_rel_batch_vert),
+                self.A_loss_pos_vert_matrix = g.DIST_FUNC_VERT_A(g.ADD_VERT_A(A_h_ent_batch_vert, A_rel_batch_vert),
                                                              A_t_ent_batch_vert)
-                self.A_loss_neg_vert_matrix = DIST_FUNC_VERT_A(ADD_VERT_A(A_hn_ent_batch_vert, A_rel_batch_vert),
+                self.A_loss_neg_vert_matrix = g.DIST_FUNC_VERT_A(g.ADD_VERT_A(A_hn_ent_batch_vert, A_rel_batch_vert),
                                                              A_tn_ent_batch_vert)
 
                 return [self.A_loss_pos_vert_matrix, self.A_loss_neg_vert_matrix]
 
 
             elif self.method == 'murp':
-                self.A_loss_pos_vert_matrix = (-1) * DIST_FUNC_VERT_A(tf.transpose(exp0(
+                self.A_loss_pos_vert_matrix = (-1) * g.DIST_FUNC_VERT_A(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg1, tf.transpose(log0(A_h_ent_batch_vert))))),
                     hyper_add(A_t_ent_batch_vert, A_rel_batch_vert))
-                self.A_loss_neg_vert_matrix = (-1) * DIST_FUNC_VERT_A(tf.transpose(exp0(
+                self.A_loss_neg_vert_matrix = (-1) * g.DIST_FUNC_VERT_A(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg1, tf.transpose(log0(A_hn_ent_batch_vert))))),
                     hyper_add(A_tn_ent_batch_vert, A_rel_batch_vert))
 
@@ -857,18 +614,18 @@ class TFParts(tf.keras.Model):
                 #     VEC_VEC_MULT_VERT_A(A_rel_batch_vert, VEC_VEC_MULT_VERT_A(A_hn_ent_batch_vert, A_tn_ent_batch_vert)), 1)
 
                 self.A_loss_pos_vert_matrix = \
-                VEC_VEC_MULT_VERT_A(A_rel_batch_vert, VEC_VEC_MULT_VERT_A(A_h_ent_batch_vert, A_t_ent_batch_vert))
+                g.VEC_VEC_MULT_VERT_A(A_rel_batch_vert, g.VEC_VEC_MULT_VERT_A(A_h_ent_batch_vert, A_t_ent_batch_vert))
                 self.A_loss_neg_vert_matrix = \
-                    VEC_VEC_MULT_VERT_A(A_rel_batch_vert,
-                                        VEC_VEC_MULT_VERT_A(A_hn_ent_batch_vert, A_tn_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_A(A_rel_batch_vert,
+                                        g.VEC_VEC_MULT_VERT_A(A_hn_ent_batch_vert, A_tn_ent_batch_vert))
 
                 return [self.A_loss_pos_vert_matrix, self.A_loss_neg_vert_matrix]
 
             elif self.method == 'hole':
                 self.A_loss_pos_vert_matrix = \
-                    VEC_VEC_MULT_VERT_A(A_rel_batch_vert, circular_correlation(A_h_ent_batch_vert, A_t_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_A(A_rel_batch_vert, circular_correlation(A_h_ent_batch_vert, A_t_ent_batch_vert))
                 self.A_loss_neg_vert_matrix = \
-                    VEC_VEC_MULT_VERT_A(A_rel_batch_vert, circular_correlation(A_hn_ent_batch_vert, A_tn_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_A(A_rel_batch_vert, circular_correlation(A_hn_ent_batch_vert, A_tn_ent_batch_vert))
 
                 return [self.A_loss_pos_vert_matrix, self.A_loss_neg_vert_matrix]
 
@@ -886,26 +643,26 @@ class TFParts(tf.keras.Model):
             _A_hn_index_horiz = tf.dtypes.cast(_A_hn_index_horiz, tf.int64)
             _A_tn_index_horiz = tf.dtypes.cast(_A_tn_index_horiz, tf.int64)
 
-            A_h_ent_batch_horiz = NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_h_index_horiz))
-            A_t_ent_batch_horiz = NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_t_index_horiz))
+            A_h_ent_batch_horiz = g.NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_h_index_horiz))
+            A_t_ent_batch_horiz = g.NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_t_index_horiz))
             A_rel_batch_horiz = tf.nn.embedding_lookup(self._r1_horiz, _A_r_index_horiz)
-            A_hn_ent_batch_horiz = NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_hn_index_horiz))
-            A_tn_ent_batch_horiz = NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_tn_index_horiz))
+            A_hn_ent_batch_horiz = g.NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_hn_index_horiz))
+            A_tn_ent_batch_horiz = g.NORM_FUNC_HORIZ_A(tf.nn.embedding_lookup(self._ht1_horiz, _A_tn_index_horiz))
 
             # Compute the predictions
             if self.method == 'transe':
-                self.A_loss_pos_horiz_matrix = DIST_FUNC_HORIZ_A(ADD_HORIZ_A(A_h_ent_batch_horiz, A_rel_batch_horiz),
+                self.A_loss_pos_horiz_matrix = g.DIST_FUNC_HORIZ_A(g.ADD_HORIZ_A(A_h_ent_batch_horiz, A_rel_batch_horiz),
                                                                A_t_ent_batch_horiz)
-                self.A_loss_neg_horiz_matrix = DIST_FUNC_HORIZ_A(ADD_HORIZ_A(A_hn_ent_batch_horiz, A_rel_batch_horiz),
+                self.A_loss_neg_horiz_matrix = g.DIST_FUNC_HORIZ_A(g.ADD_HORIZ_A(A_hn_ent_batch_horiz, A_rel_batch_horiz),
                                                                A_tn_ent_batch_horiz)
 
                 return [self.A_loss_pos_horiz_matrix, self.A_loss_neg_horiz_matrix]
 
             elif self.method == 'murp':
-                self.A_loss_pos_horiz_matrix = (-1) * DIST_FUNC_HORIZ_A(tf.transpose(exp0(
+                self.A_loss_pos_horiz_matrix = (-1) * g.DIST_FUNC_HORIZ_A(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg1, tf.transpose(log0(A_h_ent_batch_horiz))))),
                     hyper_add(A_t_ent_batch_horiz, A_rel_batch_horiz))
-                self.A_loss_neg_horiz_matrix = (-1) * DIST_FUNC_HORIZ_A(tf.transpose(exp0(
+                self.A_loss_neg_horiz_matrix = (-1) * g.DIST_FUNC_HORIZ_A(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg1, tf.transpose(log0(A_hn_ent_batch_horiz))))),
                     hyper_add(A_tn_ent_batch_horiz, A_rel_batch_horiz))
 
@@ -913,19 +670,19 @@ class TFParts(tf.keras.Model):
 
             elif self.method == 'distmult':
                 self.A_loss_pos_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz, VEC_VEC_MULT_HORIZ_A(A_h_ent_batch_horiz, A_t_ent_batch_horiz))
+                    g.VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz, g.VEC_VEC_MULT_HORIZ_A(A_h_ent_batch_horiz, A_t_ent_batch_horiz))
                 self.A_loss_neg_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz,
-                                       VEC_VEC_MULT_HORIZ_A(A_hn_ent_batch_horiz, A_tn_ent_batch_horiz))
+                    g.VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz,
+                                       g.VEC_VEC_MULT_HORIZ_A(A_hn_ent_batch_horiz, A_tn_ent_batch_horiz))
 
                 return [self.A_loss_pos_horiz_matrix, self.A_loss_neg_horiz_matrix]
 
             elif self.method == 'hole':
                 self.A_loss_pos_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz,
+                    g.VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz,
                                        circular_correlation(A_h_ent_batch_horiz, A_t_ent_batch_horiz))
                 self.A_loss_neg_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz,
+                    g.VEC_VEC_MULT_HORIZ_A(A_rel_batch_horiz,
                                        circular_correlation(A_hn_ent_batch_horiz, A_tn_ent_batch_horiz))
 
                 return [self.A_loss_pos_horiz_matrix, self.A_loss_neg_horiz_matrix]
@@ -947,26 +704,26 @@ class TFParts(tf.keras.Model):
             _B_hn_index_vert = tf.dtypes.cast(_B_hn_index_vert, tf.int64)
             _B_tn_index_vert = tf.dtypes.cast(_B_tn_index_vert, tf.int64)
 
-            B_h_ent_batch_vert = NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_h_index_vert))
-            B_t_ent_batch_vert = NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_t_index_vert))
+            B_h_ent_batch_vert = g.NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_h_index_vert))
+            B_t_ent_batch_vert = g.NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_t_index_vert))
             B_rel_batch_vert = tf.nn.embedding_lookup(self._r2_vert, _B_r_index_vert)
-            B_hn_ent_batch_vert = NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_hn_index_vert))
-            B_tn_ent_batch_vert = NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_tn_index_vert))
+            B_hn_ent_batch_vert = g.NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_hn_index_vert))
+            B_tn_ent_batch_vert = g.NORM_FUNC_VERT_B(tf.nn.embedding_lookup(self._ht2_vert, _B_tn_index_vert))
 
             # Compute the predictions
             if self.method == 'transe':
-                self.B_loss_pos_vert_matrix = DIST_FUNC_VERT_B(ADD_VERT_B(B_h_ent_batch_vert, B_rel_batch_vert),
+                self.B_loss_pos_vert_matrix = g.DIST_FUNC_VERT_B(g.ADD_VERT_B(B_h_ent_batch_vert, B_rel_batch_vert),
                                                              B_t_ent_batch_vert)
-                self.B_loss_neg_vert_matrix = DIST_FUNC_VERT_B(ADD_VERT_B(B_hn_ent_batch_vert, B_rel_batch_vert),
+                self.B_loss_neg_vert_matrix = g.DIST_FUNC_VERT_B(g.ADD_VERT_B(B_hn_ent_batch_vert, B_rel_batch_vert),
                                                              B_tn_ent_batch_vert)
 
                 return [self.B_loss_pos_vert_matrix, self.B_loss_neg_vert_matrix]
 
             elif self.method == 'murp':
-                self.B_loss_pos_vert_matrix = (-1) * DIST_FUNC_VERT_B(tf.transpose(exp0(
+                self.B_loss_pos_vert_matrix = (-1) * g.DIST_FUNC_VERT_B(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg2, tf.transpose(log0(B_h_ent_batch_vert))))),
                     hyper_add(B_t_ent_batch_vert, B_rel_batch_vert))
-                self.B_loss_neg_vert_matrix = (-1) * DIST_FUNC_VERT_B(tf.transpose(exp0(
+                self.B_loss_neg_vert_matrix = (-1) * g.DIST_FUNC_VERT_B(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg2, tf.transpose(log0(B_hn_ent_batch_vert))))),
                     hyper_add(B_tn_ent_batch_vert, B_rel_batch_vert))
 
@@ -974,16 +731,16 @@ class TFParts(tf.keras.Model):
 
             elif self.method == 'distmult':
                 self.B_loss_pos_vert_matrix = \
-                    VEC_VEC_MULT_VERT_B(B_rel_batch_vert, VEC_VEC_MULT_VERT_B(B_h_ent_batch_vert, B_t_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_B(B_rel_batch_vert, g.VEC_VEC_MULT_VERT_B(B_h_ent_batch_vert, B_t_ent_batch_vert))
                 self.B_loss_neg_vert_matrix = \
-                    VEC_VEC_MULT_VERT_B(B_rel_batch_vert, VEC_VEC_MULT_VERT_B(B_hn_ent_batch_vert, B_tn_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_B(B_rel_batch_vert, g.VEC_VEC_MULT_VERT_B(B_hn_ent_batch_vert, B_tn_ent_batch_vert))
                 return [self.B_loss_pos_vert_matrix, self.B_loss_neg_vert_matrix]
 
             elif self.method == 'hole':
                 self.B_loss_pos_vert_matrix = \
-                    VEC_VEC_MULT_VERT_B(B_rel_batch_vert, circular_correlation(B_h_ent_batch_vert, B_t_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_B(B_rel_batch_vert, circular_correlation(B_h_ent_batch_vert, B_t_ent_batch_vert))
                 self.B_loss_neg_vert_matrix = \
-                    VEC_VEC_MULT_VERT_B(B_rel_batch_vert, circular_correlation(B_hn_ent_batch_vert, B_tn_ent_batch_vert))
+                    g.VEC_VEC_MULT_VERT_B(B_rel_batch_vert, circular_correlation(B_hn_ent_batch_vert, B_tn_ent_batch_vert))
 
                 return [self.B_loss_pos_vert_matrix, self.B_loss_neg_vert_matrix]
 
@@ -1001,26 +758,26 @@ class TFParts(tf.keras.Model):
             _B_hn_index_horiz = tf.dtypes.cast(_B_hn_index_horiz, tf.int64)
             _B_tn_index_horiz = tf.dtypes.cast(_B_tn_index_horiz, tf.int64)
 
-            B_h_ent_batch_horiz = NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_h_index_horiz))
-            B_t_ent_batch_horiz = NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_t_index_horiz))
+            B_h_ent_batch_horiz = g.NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_h_index_horiz))
+            B_t_ent_batch_horiz = g.NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_t_index_horiz))
             B_rel_batch_horiz = tf.nn.embedding_lookup(self._r2_horiz, _B_r_index_horiz)
-            B_hn_ent_batch_horiz = NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_hn_index_horiz))
-            B_tn_ent_batch_horiz = NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_tn_index_horiz))
+            B_hn_ent_batch_horiz = g.NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_hn_index_horiz))
+            B_tn_ent_batch_horiz = g.NORM_FUNC_HORIZ_B(tf.nn.embedding_lookup(self._ht2_horiz, _B_tn_index_horiz))
 
             # Compute the predictions
             if self.method == 'transe':
-                self.B_loss_pos_horiz_matrix = DIST_FUNC_HORIZ_B(ADD_HORIZ_B(B_h_ent_batch_horiz, B_rel_batch_horiz),
+                self.B_loss_pos_horiz_matrix = g.DIST_FUNC_HORIZ_B(g.ADD_HORIZ_B(B_h_ent_batch_horiz, B_rel_batch_horiz),
                                                                B_t_ent_batch_horiz)
-                self.B_loss_neg_horiz_matrix = DIST_FUNC_HORIZ_B(ADD_HORIZ_B(B_hn_ent_batch_horiz, B_rel_batch_horiz),
+                self.B_loss_neg_horiz_matrix = g.DIST_FUNC_HORIZ_B(g.ADD_HORIZ_B(B_hn_ent_batch_horiz, B_rel_batch_horiz),
                                                                B_tn_ent_batch_horiz)
 
                 return [self.B_loss_pos_horiz_matrix, self.B_loss_neg_horiz_matrix]
 
             elif self.method == 'murp':
-                self.B_loss_pos_horiz_matrix = (-1) * DIST_FUNC_HORIZ_B(tf.transpose(exp0(
+                self.B_loss_pos_horiz_matrix = (-1) * g.DIST_FUNC_HORIZ_B(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg2, tf.transpose(log0(B_h_ent_batch_horiz))))),
                     hyper_add(B_t_ent_batch_horiz, B_rel_batch_horiz))
-                self.B_loss_neg_horiz_matrix = (-1) * DIST_FUNC_HORIZ_B(tf.transpose(exp0(
+                self.B_loss_neg_horiz_matrix = (-1) * g.DIST_FUNC_HORIZ_B(tf.transpose(exp0(
                     tf.matmul(self._R_murp_kg2, tf.transpose(log0(B_hn_ent_batch_horiz))))),
                     hyper_add(B_tn_ent_batch_horiz, B_rel_batch_horiz))
 
@@ -1028,19 +785,19 @@ class TFParts(tf.keras.Model):
 
             elif self.method == 'distmult':
                 self.B_loss_pos_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz, VEC_VEC_MULT_HORIZ_B(B_h_ent_batch_horiz, B_t_ent_batch_horiz))
+                    g.VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz, g.VEC_VEC_MULT_HORIZ_B(B_h_ent_batch_horiz, B_t_ent_batch_horiz))
                 self.B_loss_neg_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz,
-                                       VEC_VEC_MULT_HORIZ_B(B_hn_ent_batch_horiz, B_tn_ent_batch_horiz))
+                    g.VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz,
+                                       g.VEC_VEC_MULT_HORIZ_B(B_hn_ent_batch_horiz, B_tn_ent_batch_horiz))
 
                 return [self.B_loss_pos_horiz_matrix, self.B_loss_neg_horiz_matrix]
 
             elif self.method == 'hole':
                 self.B_loss_pos_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz,
+                    g.VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz,
                                        circular_correlation(B_h_ent_batch_horiz, B_t_ent_batch_horiz))
                 self.B_loss_neg_horiz_matrix = \
-                    VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz,
+                    g.VEC_VEC_MULT_HORIZ_B(B_rel_batch_horiz,
                                        circular_correlation(B_hn_ent_batch_horiz, B_tn_ent_batch_horiz))
 
                 return [self.B_loss_pos_horiz_matrix, self.B_loss_neg_horiz_matrix]
@@ -1060,21 +817,21 @@ class TFParts(tf.keras.Model):
             _AM_nindex1_vert = tf.dtypes.cast(_AM_nindex1_vert, tf.int64)
             _AM_nindex2_vert = tf.dtypes.cast(_AM_nindex2_vert, tf.int64)
 
-            AM_ent1_batch = NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht1_vert, _AM_index1_vert))
-            AM_ent2_batch = NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht2_vert, _AM_index2_vert))
-            AM_ent1_nbatch = NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht1_vert, _AM_nindex1_vert))
-            AM_ent2_nbatch = NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht2_vert, _AM_nindex2_vert))
+            AM_ent1_batch = g.NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht1_vert, _AM_index1_vert))
+            AM_ent2_batch = g.NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht2_vert, _AM_index2_vert))
+            AM_ent1_nbatch = g.NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht1_vert, _AM_nindex1_vert))
+            AM_ent2_nbatch = g.NORM_FUNC_VERT_AM(tf.nn.embedding_lookup(self._ht2_vert, _AM_nindex2_vert))
 
             # Compute the predictions
             if self.bridge == 'CMP-linear':
                 # c - (W * e + b)
                 bias = tf.stack([self._b] * AM_ent1_batch.shape[0])
                 self.AM_pos_loss_matrix = AM_pos_loss_matrix = \
-                    ADD_VERT_AM(NORM_FUNC_VERT_AM(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent1_batch, self._M), bias)),
-                             SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_batch))
+                    g.ADD_VERT_AM(g.NORM_FUNC_VERT_AM(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent1_batch, self._M), bias)),
+                             g.SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_batch))
                 self.AM_neg_loss_matrix = AM_neg_loss_matrix = \
-                    ADD_VERT_AM(NORM_FUNC_VERT_AM(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent1_nbatch, self._M), bias)),
-                             SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_nbatch))
+                    g.ADD_VERT_AM(g.NORM_FUNC_VERT_AM(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent1_nbatch, self._M), bias)),
+                             g.SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_nbatch))
 
                 return [self.AM_pos_loss_matrix, self.AM_neg_loss_matrix]
 
@@ -1084,11 +841,11 @@ class TFParts(tf.keras.Model):
 
                 bias = tf.stack([self._b] * AM_ent1_batch.shape[0])
                 self.AM_pos_loss_matrix = AM_pos_loss_matrix = \
-                    ADD_VERT_AM(NORM_FUNC_VERT_AM(tf.tanh(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent1_batch, self._M), bias))),
-                             SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_batch))
+                    g.ADD_VERT_AM(g.NORM_FUNC_VERT_AM(tf.tanh(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent1_batch, self._M), bias))),
+                             g.SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_batch))
                 self.AM_neg_loss_matrix = AM_neg_loss_matrix = \
-                    ADD_VERT_AM(NORM_FUNC_VERT_AM(tf.tanh(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent1_nbatch, self._M), bias))),
-                             SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_nbatch))
+                    g.ADD_VERT_AM(g.NORM_FUNC_VERT_AM(tf.tanh(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent1_nbatch, self._M), bias))),
+                             g.SCALAR_VEC_MULT_VERT_AM(-1.0, AM_ent2_nbatch))
 
                 return [self.AM_pos_loss_matrix, self.AM_neg_loss_matrix]
 
@@ -1104,14 +861,14 @@ class TFParts(tf.keras.Model):
                                                  tf.nn.l2_normalize(tf.tanh(tf.add(tf.matmul(AM_ent2_nbatch, self._Mc), b_c)), 1))
 
                 self.AM_pos_loss_matrix = AM_pos_loss_matrix = \
-                    ADD_VERT_AM(NORM_FUNC_VERT_AM(tf.tanh(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent1_batch, self._Me), b_e))),
-                             SCALAR_VEC_MULT_VERT_AM(-1.0, NORM_FUNC_VERT_AM(
-                                 tf.tanh(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent2_batch, self._Mc), b_c)))))
+                    g.ADD_VERT_AM(g.NORM_FUNC_VERT_AM(tf.tanh(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent1_batch, self._Me), b_e))),
+                             g.SCALAR_VEC_MULT_VERT_AM(-1.0, g.NORM_FUNC_VERT_AM(
+                                 tf.tanh(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent2_batch, self._Mc), b_c)))))
 
                 self.AM_neg_loss_matrix = AM_neg_loss_matrix = \
-                    ADD_VERT_AM(NORM_FUNC_VERT_AM(tf.tanh(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent1_nbatch, self._Me), b_e))),
-                             SCALAR_VEC_MULT_VERT_AM(-1.0, NORM_FUNC_VERT_AM(
-                                 tf.tanh(ADD_VERT_AM(MATRIX_VEC_MULT_VERT_AM(AM_ent2_nbatch, self._Mc), b_c)))))
+                    g.ADD_VERT_AM(g.NORM_FUNC_VERT_AM(tf.tanh(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent1_nbatch, self._Me), b_e))),
+                             g.SCALAR_VEC_MULT_VERT_AM(-1.0, g.NORM_FUNC_VERT_AM(
+                                 tf.tanh(g.ADD_VERT_AM(g.MATRIX_VEC_MULT_VERT_AM(AM_ent2_nbatch, self._Mc), b_c)))))
 
                 return [self.AM_pos_loss_matrix, self.AM_neg_loss_matrix]
 
