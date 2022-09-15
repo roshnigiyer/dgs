@@ -11,13 +11,15 @@ import tensorflow as tf
 
 # tf.enable_eager_execution()
 
-
 # import tensorflow.compat.v1 as tf
 # tf.disable_v2_behavior()
 import time
 from multiG import multiG 
 import model as model
+import optim_new
 from optim_new import riemmanian_gradient_descent as r
+from optim_new import riemmanian_adam as ra
+
 
 from optim_new.euclidean import Euclidean
 from optim_new.poincare import Poincare
@@ -45,7 +47,8 @@ class Trainer(object):
     def build(self, multiG, method='transe', bridge='CG-one',  dim1=300, dim2=50, batch_sizeK1=1024, batch_sizeK2=1024, 
         batch_sizeA=32, a1=5., a2=0.5, m1=0.5, m2=1.0, vertical_links_A='euclidean', horizontal_links_A='euclidean',
               vertical_links_B='euclidean', horizontal_links_B='euclidean', vertical_links_AM='euclidean',
-        save_path = 'this-model.ckpt', multiG_save_path = 'this-multiG.bin', log_save_path = 'tf_log', L1=False):
+        save_path = 'this-model.ckpt', other_save_path = 'this-model.h5', multiG_save_path = 'this-multiG.bin', log_save_path = 'tf_log', L1=False,
+              lr_A_vert=0.01, lr_A_horiz=0.01, lr_B_vert=0.01, lr_B_horiz=0.01, lr_AM=0.01):
         self.multiG = multiG
         self.method = method
         self.bridge = bridge
@@ -64,6 +67,12 @@ class Trainer(object):
         self.vertical_links_B = vertical_links_B
         self.horizontal_links_B = horizontal_links_B
         self.vertical_links_AM = vertical_links_AM
+        self.lr_A_vert = lr_A_vert
+        self.lr_A_horiz = lr_A_horiz
+        self.lr_B_vert = lr_B_vert
+        self.lr_B_horiz = lr_B_horiz
+        self.lr_AM = lr_AM
+        self.other_save_path = other_save_path
 
         self.tf_parts = model.TFParts(num_rels1=self.multiG.KG1.num_rels(),
                                  num_ents1=self.multiG.KG1.num_ents(),
@@ -292,11 +301,12 @@ class Trainer(object):
 
             # A loss vert
             if self.vertical_links_A == 'euclidean':
-                opt_A_vert = tf.optimizers.Adam()
+                opt_A_vert = tf.optimizers.Adam(learning_rate=self.lr_A_vert)
             elif self.vertical_links_A == 'hyperbolic':
-                opt_A_vert = r.RiemannianSGD(Poincare())
+                opt_A_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_A_vert)
+                # opt_A_vert = ra.RiemannianAdam(Poincare(), learning_rate=self.lr_A_vert)
             elif self.vertical_links_A == 'spherical':
-                opt_A_vert = r.RiemannianSGD(Sphere())
+                opt_A_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_A_vert)
             else:
                 raise NotImplementedError()
 
@@ -307,17 +317,17 @@ class Trainer(object):
                 loss_A_vert = self.loss.lossA_vert(predictions[0], predictions[1],
                                                    self.tf_parts.vertical_links_A, self.tf_parts._m1, self.tf_parts._batch_sizeK1)
             gradients = tape.gradient(loss_A_vert, self.all_variables)
-            opt_A_vert.apply_gradients(zip(gradients, self.all_variables))
 
+            opt_A_vert.apply_gradients(zip(gradients, self.all_variables))
 
 
             # A loss horiz
             if self.horizontal_links_A == 'euclidean':
-                opt_A_horiz = tf.optimizers.Adam()
+                opt_A_horiz = tf.optimizers.Adam(learning_rate=self.lr_A_horiz)
             elif self.horizontal_links_A == 'hyperbolic':
-                opt_A_horiz = r.RiemannianSGD(Poincare())
+                opt_A_horiz = r.RiemannianSGD(Poincare(), learning_rate=self.lr_A_horiz)
             elif self.horizontal_links_A == 'spherical':
-                opt_A_horiz = r.RiemannianSGD(Sphere())
+                opt_A_horiz = r.RiemannianSGD(Sphere(), learning_rate=self.lr_A_horiz)
             else:
                 raise NotImplementedError()
 
@@ -373,11 +383,11 @@ class Trainer(object):
 
             # B loss vert
             if self.vertical_links_B == 'euclidean':
-                opt_B_vert = tf.optimizers.Adam()
+                opt_B_vert = tf.optimizers.Adam(learning_rate=self.lr_B_vert)
             elif self.vertical_links_B == 'hyperbolic':
-                opt_B_vert = r.RiemannianSGD(Poincare())
+                opt_B_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_B_vert)
             elif self.vertical_links_B == 'spherical':
-                opt_B_vert = r.RiemannianSGD(Sphere())
+                opt_B_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_B_vert)
             else:
                 raise NotImplementedError()
 
@@ -394,11 +404,11 @@ class Trainer(object):
 
             # B loss horiz
             if self.horizontal_links_B == 'euclidean':
-                opt_B_horiz = tf.optimizers.Adam()
+                opt_B_horiz = tf.optimizers.Adam(learning_rate=self.lr_B_horiz)
             elif self.horizontal_links_B == 'hyperbolic':
-                opt_B_horiz = r.RiemannianSGD(Poincare())
+                opt_B_horiz = r.RiemannianSGD(Poincare(), learning_rate=self.lr_B_horiz)
             elif self.horizontal_links_B == 'spherical':
-                opt_B_horiz = r.RiemannianSGD(Sphere())
+                opt_B_horiz = r.RiemannianSGD(Sphere(), learning_rate=self.lr_B_horiz)
             else:
                 raise NotImplementedError()
 
@@ -456,11 +466,11 @@ class Trainer(object):
 
             # AM loss
             if self.vertical_links_AM == 'euclidean':
-                opt_AM_vert = tf.optimizers.Adam()
+                opt_AM_vert = tf.optimizers.Adam(learning_rate=self.lr_AM)
             elif self.vertical_links_AM == 'hyperbolic':
-                opt_AM_vert = r.RiemannianSGD(Poincare())
+                opt_AM_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_AM)
             elif self.vertical_links_AM == 'spherical':
-                opt_AM_vert = r.RiemannianSGD(Sphere())
+                opt_AM_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_AM)
             else:
                 raise NotImplementedError()
 
@@ -553,20 +563,11 @@ class Trainer(object):
                 # this_save_path = self.tf_parts._saver.save(self.sess, self.save_path)
                 # self.multiG.save(self.multiG_save_path)
                 # print("MTransE saved in file: %s. Multi-graph saved in file: %s" % (this_save_path, self.multiG_save_path))
-        # this_save_path = self.tf_parts._saver.save(self.sess, self.save_path)
-        # self.tf_parts.save('model/type_yago_dim300_300/transe_CMP_linear/my-model.h5')
-        #
 
-        #this_save_path = self.tf_parts._saver.save(self.sess, self.save_path)
-        # self.tf_parts.save('model/type_yago_dim300_50_EUC_all/transe_CMP-linear/my-model.h5')
-
-
-        self.tf_parts.save_weights('model/type_yago_dim300_50_EUC_all/transe_CMP-linear/my-model')
+        # self.tf_parts._saver.save(self.sess, self.save_path)
+        self.tf_parts.save_weights(self.other_save_path)
         self.multiG.save(self.multiG_save_path)
 
-        # self.multiG.save(self.multiG_save_path)
-        # print("MTransE saved in file: %s. Multi-graph saved in file: %s" % (this_save_path, self.multiG_save_path))
-        # print("Done")
 
 
 # A safer loading is available in Tester, with parameters like batch_size and dim recorded in the corresponding Data component

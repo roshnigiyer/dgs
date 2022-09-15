@@ -89,7 +89,7 @@ class RiemannianSGD(optimizer_v2.OptimizerV2):
             self._get_hyper("momentum", var_dtype)
         )
 
-    @def_function.function(experimental_compile=True)
+    # @def_function.function(experimental_compile=True)
     def _resource_apply_dense(self, grad, var, apply_state=None):
         var_device, var_dtype = var.device, var.dtype.base_dtype
         coefficients = (apply_state or {}).get(

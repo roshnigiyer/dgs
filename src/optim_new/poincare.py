@@ -1,8 +1,9 @@
 """The Poincaré ball model."""
-import tensorflow as tf
 
-from tensorflow_manopt.manifolds.manifold import Manifold
-from tensorflow_manopt.manifolds import utils
+
+import tensorflow as tf
+from optim_new.manifold import Manifold
+from optim_new import utils
 import numpy as np
 
 
@@ -126,6 +127,16 @@ class Poincare(Manifold):
 
     transp = ptransp
 
+    def _gyration(self, u, v, w):
+        """Compute the gyration of :math:`u`, :math:`v`, :math:`w`:
+        :math:`\operatorname{gyr}[u, v]w =
+        \ominus (u \oplus_\kappa v) \oplus (u \oplus_\kappa (v \oplus_\kappa w))`
+        """
+        min_u_v = -self._mobius_add(u, v)
+        v_w = self._mobius_add(v, w)
+        u_v_w = self._mobius_add(u, v_w)
+        return self._mobius_add(min_u_v, u_v_w)
+
     def geodesic(self, x, u, t):
         # return x + t * u
         sqrt_k = tf.math.sqrt(tf.cast(self.k, x.dtype))
@@ -135,3 +146,4 @@ class Poincare(Manifold):
 
     def pairmean(self, x, y):
         return (x + y) / 2.0
+

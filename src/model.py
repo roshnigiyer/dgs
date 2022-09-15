@@ -300,20 +300,19 @@ class TFParts(tf.keras.Model):
         # KG1 Vertical#
         ###############
 
-
+        # flipped all of the dimensions
         self._ht1_vert = tf.Variable(
             name='ht1_vert',  # for t AND h
             shape=[self._num_entsA, self._dim1],
             dtype=tf.float32, #dtype=tf.float32
             initial_value=tf.random.uniform([self._num_entsA, self._dim1])
-            # initial_value=tf.zeros([self._num_entsA, self._dim1])
         )
+
         self._r1_vert = tf.Variable(
             name='r1_vert',
             shape=[self._num_relsA, self._dim1],
             dtype=tf.float32,
             initial_value=tf.random.uniform([self._num_relsA, self._dim1])
-            # initial_value=tf.zeros([self._num_relsA, self._dim1])
         )
         #################
         # KG1 Horizontal#
@@ -323,7 +322,6 @@ class TFParts(tf.keras.Model):
             shape=[self._num_entsA, self._dim1],
             dtype=tf.float32,
             initial_value=tf.random.uniform([self._num_entsA, self._dim1])
-            # initial_value=tf.zeros([self._num_entsA, self._dim1])
         )
         self._r1_horiz = tf.Variable(
             name='r1_horiz',
@@ -403,9 +401,9 @@ class TFParts(tf.keras.Model):
                               # initial_value=tf.zeros([self._dim2])
                               ) # bias
         self._Mc = tf.Variable(name='Mc',
-                               shape=[self._dim2, self._hidden_dim],
+                               shape=[self._hidden_dim, self._dim2],
                                dtype=tf.float32,
-                               initial_value=tf.random.uniform([self._dim2, self._hidden_dim])
+                               initial_value=tf.random.uniform([self._hidden_dim, self._dim2])
                                # initial_value=tf.zeros([self._dim2, self._hidden_dim])
                                )
         self._bc = tf.Variable(name='bc',
@@ -415,9 +413,9 @@ class TFParts(tf.keras.Model):
                                # initial_value=tf.zeros([self._hidden_dim])
                                )
         self._Me = tf.Variable(name='Me',
-                               shape=[self._dim1, self._hidden_dim],
+                               shape=[self._hidden_dim, self._dim1],
                                dtype=tf.float32,
-                               initial_value=tf.random.uniform([self._dim1, self._hidden_dim])
+                               initial_value=tf.random.uniform([self._hidden_dim, self._dim1])
                                # initial_value=tf.zeros([self._dim1, self._hidden_dim])
                                )
         self._be = tf.Variable(name='be',
@@ -495,7 +493,14 @@ class TFParts(tf.keras.Model):
                 and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
                 and self.horizontal_links_B == 'euclidean':
 
-            hyp_euc_space.hyp_euc()
+            hyp_euc_space.hyp_euc_vert_horiz()
+
+
+        elif self.vertical_links_A == 'euclidean' and self.vertical_links_B == 'hyperbolic' \
+                and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
+                and self.horizontal_links_B == 'hyperbolic':
+
+            hyp_euc_space.hyp_euc_RI_RO()
 
 
         elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
