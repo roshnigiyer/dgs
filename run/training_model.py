@@ -14,7 +14,8 @@ warnings.filterwarnings("ignore")
 sys.path.append(os.path.join(os.path.dirname(__file__), './src'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
 
-#os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+# import pycuda.autoinit
 
 import numpy as np
 import tensorflow as tf
@@ -58,21 +59,31 @@ def train():
 	parser.add_argument('--batch_K2', type=int, default=64,help='Concept dimension') #batch K2
 	parser.add_argument('--batch_A', type=int, default=128,help='Entity dimension') #batch AM
 
-	parser.add_argument('--a1', type=float, default=2.5, metavar='A',help='ins learning ratio')
-	parser.add_argument('--a2', type=float, default=1.0, metavar='a',help='onto learning ratio')
+	parser.add_argument('--a1', type=float, default=2.5, metavar='A', help='ins learning ratio')
+	parser.add_argument('--a2', type=float, default=1.0, metavar='a', help='onto learning ratio')
 	parser.add_argument('--m1', type=float, default=0.5, help='learning rate')
 	parser.add_argument('--m2', type=float, default=0.5, help='learning rate')
-	parser.add_argument('--fold', type=int, default=3, metavar='E',help='number of epochs')
+	parser.add_argument('--fold', type=int, default=3, metavar='E', help='number of epochs for AM')
+	parser.add_argument('--total_epochs', type=int, default=1, help='number of epochs for training')
+
+
+	parser.add_argument('--lr_A_vert', type=float, default=0.0005, help='learning rate')
+	parser.add_argument('--lr_A_horiz', type=float, default=0.0005, help='learning rate')
+	parser.add_argument('--lr_B_vert', type=float, default=0.0005, help='learning rate')
+	parser.add_argument('--lr_B_horiz', type=float, default=0.0005, help='learning rate')
+	parser.add_argument('--lr_AM', type=float, default=0.0005, help='learning rate')
 
 	args = parser.parse_args()
+
 
 	if args.bridge == "CG" and args.dim1 != args.dim2:
 		print("Warning! CG does not allow ")
 	print(args)
 
+
 	os.environ['CUDA_VISIBLE_DEVICES'] = args.GPU
 
-	#modelname = 'mtranse_hparams'
+	# modelname = 'mtranse_hparams'
 	modelname = args.modelname
 	path_prefix = './model/'+modelname+'/'
 	hparams_str = make_hparam_string(args.method, args.bridge, args.dim1, args.dim2, args.a1, args.a2,
@@ -81,6 +92,7 @@ def train():
 	model_prefix = path_prefix+hparams_str
 
 	model_path = model_prefix+"/"+args.method+'-model-m2.ckpt'
+	other_model_path = model_prefix+"/"+'my-model-weights'+"/"
 	data_path = model_prefix+"/"+args.method+'-multiG-m2.bin'
 	tf_log_path = path_prefix+'tf_log'+"/"+hparams_str
 	if not os.path.exists(model_prefix):
@@ -142,10 +154,11 @@ def train():
 		batch_sizeK1=args.batch_K1, batch_sizeK2=args.batch_K2, batch_sizeA=args.batch_A,
 		a1=args.a1, a2=args.a2, m1=args.m1, m2=args.m2, vertical_links_A=args.vertical_links_A, horizontal_links_A=args.horizontal_links_A,
 		vertical_links_B=args.vertical_links_B, horizontal_links_B=args.horizontal_links_B, vertical_links_AM=args.vertical_links_AM,
-		save_path = model_path, multiG_save_path = data_path, log_save_path = tf_log_path , L1=False)
+		save_path = model_path, other_save_path = other_model_path, multiG_save_path = data_path, log_save_path = tf_log_path , L1=False,
+				  lr_A_vert=args.lr_A_vert, lr_A_horiz=args.lr_A_horiz, lr_B_vert=args.lr_B_vert, lr_B_horiz=args.lr_A_horiz, lr_AM=args.lr_AM)
 
 
-	m_train.train(epochs=1, save_every_epoch=1, lr=0.0005, a1=args.a1, a2=args.a2, m1=args.m1, m2=args.m2, AM_fold=args.fold)
+	m_train.train(epochs=args.total_epochs, save_every_epoch=1, lr=0.0005, a1=args.a1, a2=args.a2, m1=args.m1, m2=args.m2, AM_fold=args.fold)
 
 
 
