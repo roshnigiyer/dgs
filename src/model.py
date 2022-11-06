@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-from tensorflow.python.framework import ops
 
 import numpy as np
 import math
@@ -11,16 +10,10 @@ import math
 # import tensorflow.compat.v1 as tf_v1
 # tf_v1.disable_v2_behavior()
 import tensorflow as tf
-import optimization.geoopt.geoopt.optim as o
-from multiG import multiG
-import pickle
-from utils import circular_correlation, np_ccorr
-from tensorflow.keras import Model
+from utils import circular_correlation
 import globals as g
-import euc_space
-import hyp_space
-import sph_space
-import hyp_euc_space
+from examples import ex_1, ex_3, ex_2, ex_4
+
 
 ########################################
 # Euclidean Norm, Distance & Operators #
@@ -480,41 +473,41 @@ class TFParts(tf.keras.Model):
     def my_build(self):
 
 
-        # Example Configs
+        # Example Configs: different settings may be added
 
         if self.vertical_links_A == 'euclidean' and self.horizontal_links_A == 'euclidean'\
                 and self.vertical_links_B == 'euclidean' and self.horizontal_links_B == 'euclidean'\
                 and self.vertical_links_AM == 'euclidean':
 
-            euc_space.all_euc()
+            ex_4.all_euc()
 
 
-        elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
-                and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
-                and self.horizontal_links_B == 'euclidean':
-
-            hyp_euc_space.hyp_euc_vert_horiz()
-
-
-        elif self.vertical_links_A == 'euclidean' and self.vertical_links_B == 'hyperbolic' \
-                and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
-                and self.horizontal_links_B == 'hyperbolic':
-
-            hyp_euc_space.hyp_euc_RI_RO()
+        # elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
+        #         and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
+        #         and self.horizontal_links_B == 'euclidean':
+        #
+        #     ex_1.hyp_euc_vert_horiz()
+        #
+        #
+        # elif self.vertical_links_A == 'euclidean' and self.vertical_links_B == 'hyperbolic' \
+        #         and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
+        #         and self.horizontal_links_B == 'hyperbolic':
+        #
+        #     ex_1.hyp_euc_RI_RO()
 
 
         elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
                 and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'hyperbolic' \
                 and self.horizontal_links_B == 'hyperbolic':
 
-                hyp_space.all_hyp()
+                ex_2.all_hyp()
 
 
         elif self.vertical_links_A == 'spherical' and self.vertical_links_B == 'spherical' \
                 and self.vertical_links_AM == 'spherical' and self.horizontal_links_A == 'spherical' \
                 and self.horizontal_links_B == 'spherical':
 
-                sph_space.all_sph()
+                ex_3.all_sph()
 
         else:
             raise NotImplementedError()
