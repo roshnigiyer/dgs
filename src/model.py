@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+from tensorflow.python.framework import ops
 
 import numpy as np
 import math
@@ -10,10 +11,13 @@ import math
 # import tensorflow.compat.v1 as tf_v1
 # tf_v1.disable_v2_behavior()
 import tensorflow as tf
-from utils import circular_correlation
+import optimization.geoopt.geoopt.optim as o
+from multiG import multiG
+import pickle
+from utils import circular_correlation, np_ccorr
+from tensorflow.keras import Model
 import globals as g
-from examples import ex_1, ex_3, ex_2, ex_4
-
+from examples import ex_1, ex_2, ex_3
 
 ########################################
 # Euclidean Norm, Distance & Operators #
@@ -169,7 +173,7 @@ def polar_convert(u):
         new_u[i] = val
 
     new_u[0] = temp_u_first
-    new_u = tf.reshape(tf.convert_to_tensor(new_u), [u._shape[0], u._shape[1]])
+    new_u = tf.reshape(tf.convert_to_tensor(new_u), [u.shape[0], u.shape[1]])
     return new_u
 
 def cartesian_convert(u):
@@ -187,13 +191,23 @@ def cartesian_convert(u):
 
         new_u[i] = new_sum * math.sin(temp_u[i])
 
-    new_u = tf.reshape(tf.convert_to_tensor(new_u), [u._shape[0], u._shape[1]])
+    new_u = tf.reshape(tf.convert_to_tensor(new_u), [u.shape[0], u.shape[1]])
     return new_u
 
 
 def spherical_add(u, v, eps=1e-5):
     ret_sum = tf.add(polar_convert(u),polar_convert(v))
     ret_sum = cartesian_convert(ret_sum)
+
+    # ret_sum_norm = tf.nn.l2_normalize(ret_sum, 1)
+    ret_sum_norm = tf.norm(ret_sum, ord=2, axis=None)
+    if (ret_sum_norm >= 1):
+        ret_sum = tf.subtract(tf.math.divide(ret_sum, ret_sum_norm), eps)
+    return ret_sum
+
+def spherical_add_alt(u, v, eps=1e-5):
+
+    ret_sum = tf.add(log0(exp0(u,k=0.5), k=0.5), log0(exp0(v,k=0.5),k=0.5))
 
     # ret_sum_norm = tf.nn.l2_normalize(ret_sum, 1)
     ret_sum_norm = tf.norm(ret_sum, ord=2, axis=None)
@@ -211,10 +225,26 @@ def spherical_matrix_vec_mult(M, u, eps=1e-5):
         ret_mult = tf.subtract(tf.math.divide(ret_mult, ret_mult_norm), eps)
     return ret_mult
 
+def spherical_matrix_vec_mult_alt(M, u, eps=1e-5):
+    ret_mult = tf.matmul(M, log0(exp0(u,k=0.5), k=0.5))
+    # ret_mult_norm = tf.nn.l2_normalize(ret_mult, 1)
+    ret_mult_norm = tf.norm(ret_mult, ord=2, axis=None)
+    if (ret_mult_norm >= 1):
+        ret_mult = tf.subtract(tf.math.divide(ret_mult, ret_mult_norm), eps)
+    return ret_mult
+
 def spherical_scalar_vec_mult(c, u, eps=1e-5):
     u = polar_convert(u)
     ret_scal_mult = tf.multiply(c,u)
     ret_scal_mult = cartesian_convert(ret_scal_mult)
+    # ret_scal_mult_norm = tf.nn.l2_normalize(ret_scal_mult, 1)
+    ret_scal_mult_norm = tf.norm(ret_scal_mult, ord=2, axis=None)
+    if (ret_scal_mult_norm >= 1):
+        ret_scal_mult = tf.subtract(tf.math.divide(ret_scal_mult, ret_scal_mult_norm), eps)
+    return ret_scal_mult
+
+def spherical_scalar_vec_mult_alt(c, u, eps=1e-5):
+    ret_scal_mult = tf.multiply(c,log0(exp0(u,k=0.5), k=0.5))
     # ret_scal_mult_norm = tf.nn.l2_normalize(ret_scal_mult, 1)
     ret_scal_mult_norm = tf.norm(ret_scal_mult, ord=2, axis=None)
     if (ret_scal_mult_norm >= 1):
@@ -227,6 +257,14 @@ def spherical_vec_vec_mult(u, v, eps=1e-5):
     v = polar_convert(v)
     ret_vec_mult = tf.multiply(u, v)
     ret_vec_mult = cartesian_convert(ret_vec_mult)
+    # ret_vec_mult_norm = tf.nn.l2_normalize(ret_vec_mult, 1)
+    ret_vec_mult_norm = tf.norm(ret_vec_mult, ord=2, axis=None)
+    if (ret_vec_mult_norm >= 1):
+        ret_vec_mult = tf.subtract(tf.math.divide(ret_vec_mult, ret_vec_mult_norm), eps)
+    return ret_vec_mult
+
+def spherical_vec_vec_mult_alt(u, v, eps=1e-5):
+    ret_vec_mult = tf.multiply(log0(exp0(u,k=0.5), k=0.5), log0(exp0(v,k=0.5), k=0.5))
     # ret_vec_mult_norm = tf.nn.l2_normalize(ret_vec_mult, 1)
     ret_vec_mult_norm = tf.norm(ret_vec_mult, ord=2, axis=None)
     if (ret_vec_mult_norm >= 1):
@@ -473,41 +511,29 @@ class TFParts(tf.keras.Model):
     def my_build(self):
 
 
-        # Example Configs: different settings may be added
+        # Example Configs
 
         if self.vertical_links_A == 'euclidean' and self.horizontal_links_A == 'euclidean'\
                 and self.vertical_links_B == 'euclidean' and self.horizontal_links_B == 'euclidean'\
                 and self.vertical_links_AM == 'euclidean':
 
-            ex_4.all_euc()
+            ex_1.all_euc()
 
 
-        # elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
-        #         and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
-        #         and self.horizontal_links_B == 'euclidean':
-        #
-        #     ex_1.hyp_euc_vert_horiz()
-        #
-        #
-        # elif self.vertical_links_A == 'euclidean' and self.vertical_links_B == 'hyperbolic' \
-        #         and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
-        #         and self.horizontal_links_B == 'hyperbolic':
-        #
-        #     ex_1.hyp_euc_RI_RO()
 
-
-        elif self.vertical_links_A == 'hyperbolic' and self.vertical_links_B == 'hyperbolic' \
-                and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'hyperbolic' \
+        elif self.vertical_links_A == 'euclidean' and self.vertical_links_B == 'hyperbolic' \
+                and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'euclidean' \
                 and self.horizontal_links_B == 'hyperbolic':
 
-                ex_2.all_hyp()
+            ex_2.hyp_euc_RI_RO()
 
 
-        elif self.vertical_links_A == 'spherical' and self.vertical_links_B == 'spherical' \
-                and self.vertical_links_AM == 'spherical' and self.horizontal_links_A == 'spherical' \
-                and self.horizontal_links_B == 'spherical':
+        elif self.vertical_links_A == 'spherical' and self.vertical_links_B == 'hyperbolic' \
+                and self.vertical_links_AM == 'hyperbolic' and self.horizontal_links_A == 'spherical' \
+                and self.horizontal_links_B == 'hyperbolic':
 
-                ex_3.all_sph()
+            ex_3.sph_hyp_RI_RO()
+
 
         else:
             raise NotImplementedError()
@@ -895,18 +921,31 @@ class Loss(object):
             return _A_loss_vert
 
         elif vert_links == 'hyperbolic':
+            # _A_loss_vert = tf.reduce_sum(
+            #     tf.maximum(
+            #         tf.subtract(tf.add(A_loss_pos_vert_matrix, _m1), A_loss_neg_vert_matrix),
+            #         0.)
+            # ) / _batch_sizeK1
+
             _A_loss_vert = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(A_loss_pos_vert_matrix, _m1), A_loss_neg_vert_matrix),
+                    tf.subtract(tf.add(tf.sqrt(tf.reduce_sum(tf.square(A_loss_pos_vert_matrix), 1)), _m1),
+                                tf.sqrt(tf.reduce_sum(tf.square(A_loss_neg_vert_matrix), 1))),
                     0.)
             ) / _batch_sizeK1
 
             return _A_loss_vert
 
         elif vert_links == 'spherical':
-            _A_loss_vert = tf.reduce_sum(
+            # _A_loss_vert = tf.reduce_sum(
+            #     tf.maximum(
+            #         tf.subtract(tf.add(A_loss_pos_vert_matrix, _m1), A_loss_neg_vert_matrix),
+            #         0.)
+            # ) / _batch_sizeK1
+            _A_loss_vert=tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(A_loss_pos_vert_matrix, _m1), A_loss_neg_vert_matrix),
+                    tf.subtract(tf.add(tf.sqrt(tf.reduce_sum(tf.square(A_loss_pos_vert_matrix), 1)), _m1),
+                                tf.sqrt(tf.reduce_sum(tf.square(A_loss_neg_vert_matrix), 1))),
                     0.)
             ) / _batch_sizeK1
 
@@ -934,16 +973,26 @@ class Loss(object):
         elif horiz_links == 'hyperbolic':
             _A_loss_horiz = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(A_loss_pos_horiz_matrix, _m1), A_loss_neg_horiz_matrix),
+                    tf.subtract(
+                        tf.add(tf.sqrt(tf.reduce_sum(tf.square(A_loss_pos_horiz_matrix), 1)), _m1),
+                        tf.sqrt(tf.reduce_sum(tf.square(A_loss_neg_horiz_matrix), 1))),
                     0.)
             ) / _batch_sizeK1
 
             return _A_loss_horiz
 
         elif horiz_links == 'spherical':
+            # _A_loss_horiz = tf.reduce_sum(
+            #     tf.maximum(
+            #         tf.subtract(tf.add(A_loss_pos_horiz_matrix, _m1), A_loss_neg_horiz_matrix),
+            #         0.)
+            # ) / _batch_sizeK1
+
             _A_loss_horiz = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(A_loss_pos_horiz_matrix, _m1), A_loss_neg_horiz_matrix),
+                    tf.subtract(
+                        tf.add(tf.sqrt(tf.reduce_sum(tf.square(A_loss_pos_horiz_matrix), 1)), _m1),
+                        tf.sqrt(tf.reduce_sum(tf.square(A_loss_neg_horiz_matrix), 1))),
                     0.)
             ) / _batch_sizeK1
 
@@ -968,16 +1017,25 @@ class Loss(object):
         elif vert_links == 'hyperbolic':
             _B_loss_vert = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(B_loss_pos_vert_matrix, _m1), B_loss_neg_vert_matrix),
+                    tf.subtract(tf.add(tf.sqrt(tf.reduce_sum(tf.square(B_loss_pos_vert_matrix), 1)), _m1),
+                                tf.sqrt(tf.reduce_sum(tf.square(B_loss_neg_vert_matrix), 1))),
                     0.)
             ) / _batch_sizeK2
+
 
             return _B_loss_vert
 
         elif vert_links == 'spherical':
+            # _B_loss_vert = tf.reduce_sum(
+            #     tf.maximum(
+            #         tf.subtract(tf.add(B_loss_pos_vert_matrix, _m1), B_loss_neg_vert_matrix),
+            #         0.)
+            # ) / _batch_sizeK2
+
             _B_loss_vert = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(B_loss_pos_vert_matrix, _m1), B_loss_neg_vert_matrix),
+                    tf.subtract(tf.add(tf.sqrt(tf.reduce_sum(tf.square(B_loss_pos_vert_matrix), 1)), _m1),
+                                tf.sqrt(tf.reduce_sum(tf.square(B_loss_neg_vert_matrix), 1))),
                     0.)
             ) / _batch_sizeK2
 
@@ -1001,18 +1059,29 @@ class Loss(object):
             return _B_loss_horiz
 
         elif horiz_links == 'hyperbolic':
+
             _B_loss_horiz = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(B_loss_pos_horiz_matrix, _m1), B_loss_neg_horiz_matrix),
+                    tf.subtract(
+                        tf.add(tf.sqrt(tf.reduce_sum(tf.square(B_loss_pos_horiz_matrix), 1)), _m1),
+                        tf.sqrt(tf.reduce_sum(tf.square(B_loss_neg_horiz_matrix), 1))),
                     0.)
             ) / _batch_sizeK2
 
             return _B_loss_horiz
 
         elif horiz_links == 'spherical':
+            # _B_loss_horiz = tf.reduce_sum(
+            #             #     tf.maximum(
+            #             #         tf.subtract(tf.add(B_loss_pos_horiz_matrix, _m1), B_loss_neg_horiz_matrix),
+            #             #         0.)
+            #             # ) / _batch_sizeK2
+
             _B_loss_horiz = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(B_loss_pos_horiz_matrix, _m1), B_loss_neg_horiz_matrix),
+                    tf.subtract(
+                        tf.add(tf.sqrt(tf.reduce_sum(tf.square(B_loss_pos_horiz_matrix), 1)), _m1),
+                        tf.sqrt(tf.reduce_sum(tf.square(B_loss_neg_horiz_matrix), 1))),
                     0.)
             ) / _batch_sizeK2
 
@@ -1043,11 +1112,17 @@ class Loss(object):
             return _AM_loss
 
         elif vert_links == 'spherical':
+            # _AM_loss = tf.reduce_sum(
+            #     tf.maximum(
+            #         tf.subtract(tf.add(AM_pos_loss_matrix, _mA), AM_neg_loss_matrix),
+            #         0.)
+            # ) / _batch_sizeA
+
             _AM_loss = tf.reduce_sum(
                 tf.maximum(
-                    tf.subtract(tf.add(AM_pos_loss_matrix, _mA), AM_neg_loss_matrix),
-                    0.)
-            ) / _batch_sizeA
+                    tf.subtract(tf.add(tf.sqrt(tf.reduce_sum(tf.square(AM_pos_loss_matrix), 1)), _mA),
+                                tf.sqrt(tf.reduce_sum(tf.square(AM_neg_loss_matrix), 1))),
+                    0.)) / _batch_sizeA
 
             return _AM_loss
 

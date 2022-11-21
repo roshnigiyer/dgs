@@ -303,10 +303,12 @@ class Trainer(object):
             if self.vertical_links_A == 'euclidean':
                 opt_A_vert = tf.optimizers.Adam(learning_rate=self.lr_A_vert)
             elif self.vertical_links_A == 'hyperbolic':
-                opt_A_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_A_vert)
+                # opt_A_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_A_vert)
                 # opt_A_vert = ra.RiemannianAdam(Poincare(), learning_rate=self.lr_A_vert)
+                opt_A_vert = tf.optimizers.Adam(learning_rate=self.lr_A_vert)
             elif self.vertical_links_A == 'spherical':
-                opt_A_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_A_vert)
+                # opt_A_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_A_vert)
+                opt_A_vert = tf.optimizers.Adam(learning_rate=self.lr_A_vert)
             else:
                 raise NotImplementedError()
 
@@ -318,16 +320,24 @@ class Trainer(object):
                                                    self.tf_parts.vertical_links_A, self.tf_parts._m1, self.tf_parts._batch_sizeK1)
             gradients = tape.gradient(loss_A_vert, self.all_variables)
 
-            opt_A_vert.apply_gradients(zip(gradients, self.all_variables))
+            # opt_A_vert.apply_gradients(zip(gradients, self.all_variables))
+
+            opt_A_vert.apply_gradients([
+                (grad, var)
+                for (grad, var) in zip(gradients, self.all_variables)
+                if grad is not None
+            ])
 
 
             # A loss horiz
             if self.horizontal_links_A == 'euclidean':
                 opt_A_horiz = tf.optimizers.Adam(learning_rate=self.lr_A_horiz)
             elif self.horizontal_links_A == 'hyperbolic':
-                opt_A_horiz = r.RiemannianSGD(Poincare(), learning_rate=self.lr_A_horiz)
+                # opt_A_horiz = r.RiemannianSGD(Poincare(), learning_rate=self.lr_A_horiz)
+                opt_A_horiz = tf.optimizers.Adam(learning_rate=self.lr_A_horiz)
             elif self.horizontal_links_A == 'spherical':
-                opt_A_horiz = r.RiemannianSGD(Sphere(), learning_rate=self.lr_A_horiz)
+                # opt_A_horiz = r.RiemannianSGD(Sphere(), learning_rate=self.lr_A_horiz)
+                opt_A_horiz = tf.optimizers.Adam(learning_rate=self.lr_A_horiz)
             else:
                 raise NotImplementedError()
 
@@ -341,7 +351,13 @@ class Trainer(object):
                                                    self.tf_parts.horizontal_links_A, self.tf_parts._m1,
                                                    self.tf_parts._batch_sizeK1)
             gradients = tape.gradient(loss_A_horiz, self.all_variables)
-            opt_A_horiz.apply_gradients(zip(gradients, self.all_variables))
+            # opt_A_horiz.apply_gradients(zip(gradients, self.all_variables))
+
+            opt_A_horiz.apply_gradients([
+                (grad, var)
+                for (grad, var) in zip(gradients, self.all_variables)
+                if grad is not None
+            ])
 
 
             batch_loss = [loss_A_vert + loss_A_horiz]
@@ -385,9 +401,11 @@ class Trainer(object):
             if self.vertical_links_B == 'euclidean':
                 opt_B_vert = tf.optimizers.Adam(learning_rate=self.lr_B_vert)
             elif self.vertical_links_B == 'hyperbolic':
-                opt_B_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_B_vert)
+                # opt_B_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_B_vert)
+                opt_B_vert = tf.optimizers.Adam(learning_rate=self.lr_B_vert)
             elif self.vertical_links_B == 'spherical':
-                opt_B_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_B_vert)
+                # opt_B_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_B_vert)
+                opt_B_vert = tf.optimizers.Adam(learning_rate=self.lr_B_vert)
             else:
                 raise NotImplementedError()
 
@@ -399,16 +417,24 @@ class Trainer(object):
                 loss_B_vert = self.loss.lossB_vert(predictions[0], predictions[1],
                                                    self.tf_parts.vertical_links_B, self.tf_parts._m1, self.tf_parts._batch_sizeK2)
             gradients = tape.gradient(loss_B_vert, self.all_variables)
-            opt_B_vert.apply_gradients(zip(gradients, self.all_variables))
+            # opt_B_vert.apply_gradients(zip(gradients, self.all_variables))
+
+            opt_B_vert.apply_gradients([
+                (grad, var)
+                for (grad, var) in zip(gradients, self.all_variables)
+                if grad is not None
+            ])
 
 
             # B loss horiz
             if self.horizontal_links_B == 'euclidean':
                 opt_B_horiz = tf.optimizers.Adam(learning_rate=self.lr_B_horiz)
             elif self.horizontal_links_B == 'hyperbolic':
-                opt_B_horiz = r.RiemannianSGD(Poincare(), learning_rate=self.lr_B_horiz)
+                # opt_B_horiz = r.RiemannianSGD(Poincare(), learning_rate=self.lr_B_horiz)
+                opt_B_horiz = tf.optimizers.Adam(learning_rate=self.lr_B_horiz)
             elif self.horizontal_links_B == 'spherical':
-                opt_B_horiz = r.RiemannianSGD(Sphere(), learning_rate=self.lr_B_horiz)
+                # opt_B_horiz = r.RiemannianSGD(Sphere(), learning_rate=self.lr_B_horiz)
+                opt_B_horiz = tf.optimizers.Adam(learning_rate=self.lr_B_horiz)
             else:
                 raise NotImplementedError()
 
@@ -421,7 +447,13 @@ class Trainer(object):
                                                    self.tf_parts.horizontal_links_B, self.tf_parts._m1,
                                                    self.tf_parts._batch_sizeK2)
             gradients = tape.gradient(loss_B_horiz, self.all_variables)
-            opt_B_horiz.apply_gradients(zip(gradients, self.all_variables))
+            # opt_B_horiz.apply_gradients(zip(gradients, self.all_variables))
+
+            opt_B_vert.apply_gradients([
+                (grad, var)
+                for (grad, var) in zip(gradients, self.all_variables)
+                if grad is not None
+            ])
 
 
             # Observe total loss
@@ -468,9 +500,11 @@ class Trainer(object):
             if self.vertical_links_AM == 'euclidean':
                 opt_AM_vert = tf.optimizers.Adam(learning_rate=self.lr_AM)
             elif self.vertical_links_AM == 'hyperbolic':
-                opt_AM_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_AM)
+                # opt_AM_vert = r.RiemannianSGD(Poincare(), learning_rate=self.lr_AM)
+                opt_AM_vert = tf.optimizers.Adam(learning_rate=self.lr_AM)
             elif self.vertical_links_AM == 'spherical':
-                opt_AM_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_AM)
+                # opt_AM_vert = r.RiemannianSGD(Sphere(), learning_rate=self.lr_AM)
+                opt_AM_vert = tf.optimizers.Adam(learning_rate=self.lr_AM)
             else:
                 raise NotImplementedError()
 
@@ -482,7 +516,13 @@ class Trainer(object):
                                                      self.tf_parts.vertical_links_AM, self.tf_parts._mA,
                                                      self.tf_parts._batch_sizeA)
             gradients = tape.gradient(loss_AM, self.all_variables)
-            opt_AM_vert.apply_gradients(zip(gradients, self.all_variables))
+            # opt_AM_vert.apply_gradients(zip(gradients, self.all_variables))
+
+            opt_AM_vert.apply_gradients([
+                (grad, var)
+                for (grad, var) in zip(gradients, self.all_variables)
+                if grad is not None
+            ])
 
 
             # Observe total loss
