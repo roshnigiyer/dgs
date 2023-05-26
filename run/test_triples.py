@@ -22,11 +22,11 @@ import tensorflow as tf
 import time
 import multiG
 import model as model
-from tester1 import Tester
+from .tester1 import Tester
 import argparse
 
 # all parameter required
-parser = argparse.ArgumentParser(description='JOIE Testing: Type Linking')
+parser = argparse.ArgumentParser(description='Testing: Type Linking')
 parser.add_argument('--modelname', type=str,help='model category')
 parser.add_argument('--model', type=str,help='model name including data and model')
 parser.add_argument('--testfile', type=str,help='test data')
